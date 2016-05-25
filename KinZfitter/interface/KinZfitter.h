@@ -83,25 +83,29 @@ public:
         void SetZ1BigCov();
         void SetZ2BigCov();
 
-/*
-        TMatrixDSym GetRefitZ1BigCov();        
-
-        // cov matrix when refitting Z2
-        //void SetBigCovZZ(); cov matrix when 4e/4mu final state and both Z needs to be refitted
-
-        TMatrixDSym GetRefitZZBigCov();
-        //  
-        TMatrixDSym GetRefitZZSFBigCov();
-        TMatrixDSym GetRefitZZOFBigCov();
-*/
-
         std::vector<TLorentzVector> GetRefitP4s();
         std::vector<TLorentzVector> GetP4s();
 
-        ////////////////
+        ////////////////////////////////////////////////
 
-        //Need to check in deep whether this function is doable 
-        //RooFormulaVar p1DOTp2(RooRealVar pT1, RooRealVar theta1, RooRealVar phi1, RooRealVar m1, TString index1, RooRealVar pT2, RooRealVar theta2, RooRealVar phi2, RooRealVar m2, TString index2);
+        void Setup2L2Q(std::vector<TLorentzVector> selectedFsrLeptons,std::vector<TLorentzVector> Zhad, JME::JetResolution resolution_pt, JME::JetResolution resolution_phi, double rho);
+
+        ///
+        void KinRefitZlepZhad();
+
+        int  PerZlepLikelihood(double & l1, double & l2, double & lph1, double & lph2);
+        int  PerZhadLikelihood(double & j1, double & j2, double & dphij1, double & dphij2);
+        void SetZlepResult(double l1, double l2, double lph1, double lph2);
+        void SetZhadResult(double j1, double j2, double dphij1, double dphij2);
+
+        // result wrappers
+        std::vector<TLorentzVector> GetRefitP4s2L2Q();
+        double GetRefitMZZ2L2Q();
+        double GetMZZ();
+        double GetMZlep();
+        double GetRefitMZlep();
+        double GetMZhad();
+        double GetRefitMZhad();
 
 private:
 
@@ -144,6 +148,12 @@ private:
         double lZ1_ph1_, lZ1_ph2_, lZ2_ph1_, lZ2_ph2_;
         // True mZ1 shape parameters
         double sgVal_, aVal_, nVal_, fVal_, meanVal_, sigmaVal_, f1Val_;
+
+        // ZZ2L2Q
+        void initZhad(std::vector<TLorentzVector> Zhad, JME::JetResolution resolution_pt, JME::JetResolution resolution_phi, double rho);        
+        std::vector<TLorentzVector> p4sZhad_, p4sZhadREFIT_;
+        std::vector<double> pTerrsZhad_, phierrsZhad_; 
+        double j1_, j2_, dphij1_, dphij2_;
 
 };
 

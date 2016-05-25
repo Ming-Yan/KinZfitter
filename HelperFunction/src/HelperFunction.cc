@@ -34,8 +34,8 @@
 HelperFunction::HelperFunction()
 {
 
-        //declarations
-        debug_ = 0;
+    //declarations
+    debug_ = 0;
 
 /*
         TString fmu_s = TString(edm::FileInPath ( "KinZfitter/HelperFunction/hists/ebeOverallCorrections.Legacy2013.v0.root" ).fullPath());
@@ -143,6 +143,36 @@ double HelperFunction::masserror( std::vector<TLorentzVector> Lep, std::vector<d
         return sqrt(masserr);
 }
 
+
+//double HelperFunction::pterrJER(double pt, double eta, double Rho, const edm::EventSetup& iSetup){
+
+double HelperFunction::relpterrJER(JME::JetResolution resolution_pt,double pt,double eta, double Rho){
+
+/*
+        JME::JetResolution resolution_pt = JME::JetResolution::get(iSetup, "AK4PFchs_pt");
+*/
+        JME::JetParameters parameters;
+        parameters.setJetPt(pt);
+        parameters.setJetEta(eta);
+        parameters.setRho(Rho);
+
+        return  double(resolution_pt.getResolution(parameters));
+
+}
+
+double HelperFunction::phierrJER(JME::JetResolution resolution_phi,double pt,double eta, double Rho){
+
+/*
+        JME::JetResolution resolution_phi = JME::JetResolution::get(iSetup, "AK4PFchs_phi");
+*/
+        JME::JetParameters parameters;
+        parameters.setJetPt(pt);
+        parameters.setJetEta(eta);
+        parameters.setRho(Rho);
+
+        return double(resolution_phi.getResolution(parameters));
+
+}
 
 double HelperFunction::pterr( reco::Candidate *c, bool isData){
 
