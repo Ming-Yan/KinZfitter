@@ -213,11 +213,9 @@ void KinZfitter::KinRefitZlepZhad()
   double j1, j2, dphij1, dphij2;
   j1 = 1.0; j2 = 1.0; dphij1 = 0.0; dphij2 = 0.0;
   PerZhadLikelihood(j1,j2, dphij1,dphij2);
-  //if(debug_) 
-  cout<<"j1 "<<j1<<"; j2 "<<j2<<" dphij1 "<<dphij1<<" dphij2 "<<dphij2<<endl;
+  if(debug_) cout<<"j1 "<<j1<<"; j2 "<<j2<<" dphij1 "<<dphij1<<" dphij2 "<<dphij2<<endl;
   SetZhadResult(j1,j2,dphij1,dphij2);
-  //if(debug_) 
-  cout<<"Zhad refit done"<<endl;
+  if(debug_) cout<<"Zhad refit done"<<endl;
 
 
 }
