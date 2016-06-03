@@ -287,10 +287,12 @@ int KinZfitter::PerZhadLikelihood(double & j1, double & j2, double & dphij1, dou
     RooGaussian gauss2("gauss2","gaussian PDF", *pT2RECO, *pT2, sigmaZhad_2);
 
     RooRealVar bwMean("bwMean", "m_{Z^{0}}", 91.187);
-    RooRealVar bwGamma("bwGamma", "#Gamma", 2.5);
+    RooRealVar bwGamma("bwGamma", "#Gamma", 2.5/2);
 
     // PDF
-    RooGenericPdf RelBW("RelBW","1/( pow(mZ1*mZ1-bwMean*bwMean,2)+pow(mZ1,4)*pow(bwGamma/bwMean,2) )", RooArgSet(*mZ1,bwMean,bwGamma) );
+    //RooGenericPdf RelBW("RelBW","1/( pow(mZ1*mZ1-bwMean*bwMean,2)+pow(mZ1,4)*pow(bwGamma/bwMean,2) )", RooArgSet(*mZ1,bwMean,bwGamma) );
+
+    RooGaussian  RelBW("RelBW","RelBW", *mZ1, bwMean, bwGamma);
 
     RooProdPdf *PDFRelBWxResol;
     PDFRelBWxResol = new RooProdPdf("PDFRelBWxResol","PDFRelBWxResol", 
@@ -330,14 +332,14 @@ void KinZfitter::SetZhadResult(double j1, double j2, double dphij1, double dphij
 
   if(debug_) cout<<"Results: j1 "<<j1<<" j2 "<<j2<<endl;
   dphij1_ = dphij1; dphij2_ = dphij2;
-  //
  
   TLorentzVector Zhad_1 = p4sZhad_[0]; TLorentzVector Zhad_2 = p4sZhad_[1];
 
   TLorentzVector Zhad_1_True(0,0,0,0);
   Zhad_1_True.SetPtEtaPhiM(j1_*Zhad_1.Pt(),Zhad_1.Eta(),Zhad_1.Phi(),Zhad_1.M());
+
   TLorentzVector Zhad_2_True(0,0,0,0);
-  Zhad_2_True.SetPtEtaPhiM(j1_*Zhad_2.Pt(),Zhad_2.Eta(),Zhad_2.Phi(),Zhad_2.M());
+  Zhad_2_True.SetPtEtaPhiM(j2_*Zhad_2.Pt(),Zhad_2.Eta(),Zhad_2.Phi(),Zhad_2.M());
 
   p4sZhadREFIT_.push_back(Zhad_1_True); p4sZhadREFIT_.push_back(Zhad_2_True);
 
