@@ -72,7 +72,6 @@
 // fit result covariance matrix
 #include <TMatrixDSym.h>
 
-
 namespace reco { class Candidate; class Muon; class GsfElectron; class Track; class PFCandidate; }
 namespace edm { class EventSetup; }
 
@@ -81,10 +80,6 @@ namespace edm { class EventSetup; }
 #include "MagneticField/Engine/interface/MagneticField.h"
 #include <TMatrixDSym.h>
 #include <boost/shared_ptr.hpp>
-
-#include "JetMETCorrections/Modules/interface/JetResolution.h"
-#include "DataFormats/PatCandidates/interface/Jet.h"
-
 
 using namespace std;
 
@@ -98,18 +93,21 @@ class HelperFunction
 
       void setdebug(int d){debug_= d;};
 
-      //For jet
-      double relpterrJER(JME::JetResolution resolution_pt,double pt,double eta, double Rho);
-      double phierrJER(JME::JetResolution resolution_phi,double pt,double eta, double Rho);
-
       //ForZ
       double pterr(reco::Candidate *c, bool isData);
+
+      //double pterr(pat::Electron electron, bool isData);
+      //double pterr(pat::Muon muon, bool isData);
       double pterr(TLorentzVector fsrPhoton);
+
       double pterr(reco::GsfElectron* electron, bool isData);
       double pterr(reco::Muon* muon, bool isData);
 
       double masserror(std::vector<TLorentzVector> p4s, std::vector<double> pTErrs);
+
       double masserrorFullCov(std::vector<TLorentzVector> p4s, TMatrixDSym covMatrix);
+
+      //double masserror(std::vector<TLorentzVector> p4s, )
 
 
       // ---------- const member functions ---------------------

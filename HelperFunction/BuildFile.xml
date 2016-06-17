@@ -35,11 +35,6 @@
 <use   name="RecoEcal/EgammaCoreTools"/>
 <use   name="PhysicsTools/SelectorUtils"/>
 <use   name="MagneticField/Records"/>
-<use   name="CondFormats/JetMETObjects"/>
-<use   name="JetMETCorrections/Objects"/>
-<use   name="JetMETCorrections/Algorithms"/>
-<use   name="JetMETCorrections/JetCorrector"/>
-<use   name="JetMETCorrections/Modules"/>
 <use name="root"/>
 <use name="rootmath"/>
 <use name="roofit"/>
