@@ -1,88 +1,105 @@
-Using Z mass kinematic constraint(s) to refit lepton momenta in H-to-ZZ2l2q
+# KinZfitter
+Using Z mass kinematic constraint(s) to refit lepton momenta in H-to-ZZ*
 
-Code structure
-KinZfitter : the class read the inputs from jets that form the hadronic Z decay,, do the refitting, and get the refitted results HelperFunction : the class that read jet pT errors by accessing the JME::JetResolution in CMSSW
+- Code structure
+
+KinZfitter : the class read the inputs from leptons and fsr photons that form the Higgs Candidate,, do the refitting, and get the refitted results
+HelperFunction : the class that read lepton/photon pT errors by accessing the pat:Electron, pat:Muon and pat:PFPartticle and also provide the function to help calculate mass4l error (including the covariance matrix)
 
 To include the refit in your analyzer:
 
 0.Check out package
 
-cd $CMSSW_BASE/src
+  cd $CMSSW_BASE/src
+  
+  git clone https://github.com/tocheng/KinZfitter.git
+   
+  cd KinZfitter
+  
+  git checkout -b from-v1.0 v1.0
+  
+  cd ../
+  
+  scram b -j 8 
+  
+(Tag for Moriond 2016 will be named as v1.x )
 
-git clone https://github.com/tocheng/KinZfitter.git
+In your main analyzer:
 
-cd KinZfitter
-
-git checkout -b from-Zhadv1.0 Zhadv1.0
-
-cd ../
-
-scram b -j 8
-
-0.5. Add the package and JER related package into your BuildFile.xml
-
-In your main analyzer analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
+0.Add the package into your BuildFile.xml
+   <use   name="KinZfitter/KinZfitter"/>
 
 1.include the head file
 
-   #include "KinZfitter/KinZfitter/interface/KinZfitter.h"
+  #include "KinZfitter/KinZfitter/interface/KinZfitter.h"
 
-2.Declare and then initialize the KinZfitter class when initializing your analyzer 
-i.e., declare and initialize in beginJob() in EDAnalyzer framework 
-      KinZfitter *kinZfitter; 
-      kinZfitter = new KinZfitter(isData); //(In data, (isData=true). In mc (isData=false))
+2.Declare and then initialize the KinZfitter class when initializing your analyzer
+  i.e., declare and initialize in beginJob() in EDAnalyzer framework
+    KinZfitter *kinZfitter;
+    kinZfitter = new KinZfitter(isData);
+    //(In data, (isData=true). In mc (isData=false))
 
-3.Prepare inputs after Higgs decay to ZZ2l2q candidate is formed:
+3.Prepare inputs after Higgs candidate is formed:
 
-     leptons: prepare the TLorentzVectors lep+fsr for leptontic Z decay 
-     (similar to Z1/Z2 lepton TLorentzVector for HZZ4L matrix element calculation) 
-     say TLorentzVector lep1, lep2;
+  leptons: 
+   Suppose Lep_Z1_1,Lep_Z1_2, Lep_Z2_1,Lep_Z2_2 are pat:Electron or pat:Muon from Z1 and Z2 decay.
+   
+   In your analyzer, do:
 
-     jets: prepare the TLorentzVectors (resolved) jets from hadronic Z decay
-     say TLorentzVector jet1, jet2;
+     vector<reco::Candidate *> selectedLeptons;
+     reco::Candidate *cZ1_1 = dynamic_cast<reco::Candidate* >(&Lep_Z1_1);
+     reco::Candidate *cZ1_2 = dynamic_cast<reco::Candidate* >(&Lep_Z1_2);
+     reco::Candidate *cZ2_1 = dynamic_cast<reco::Candidate* >(&Lep_Z2_1);
+     reco::Candidate *cZ2_2 = dynamic_cast<reco::Candidate* >(&Lep_Z2_2);
+     selectedLeptons.push_back(cZ1_1);
+     selectedLeptons.push_back(cZ1_2);
+     selectedLeptons.push_back(cZ2_1);
+     selectedLeptons.push_back(cZ2_2);
 
-     jet resolution: prepare the jet resolution objects for pt and phi resolution 
-     say JME::JetResolution resolution_pt, resolution_phi;
+  fsrPhotons :
+    Supporse find pat::PFParticle fsrPhoton which is the fsr photon.
+    To fill the array if the photon is associated to a certain lepton from Z1 or Z2 decay, 
+    do something like:
 
-      resolution_pt = JME::JetResolution::get(iSetup, "AK4PFchs_pt"); 
-      resolution_phi = JME::JetResolution::get(iSetup, "AK4PFchs_phi");
+     TLorentzVector p4FSR(fsrPhoton.px(),fsrPhoton.py(),fsrPhoton.pz(),fsrPhoton.energy);
 
-      Rho : get rho parameter for isolation calculation (double precision), say rho
+     std::map<unsigned int, TLorentzVector> selectedFsrMap;
+     if(associateLeptonZ1_1) selectedFsrMap[0] = p4FSR;
+     if(associateLeptonZ1_2) selectedFsrMap[1] = p4FSR;
+     if(associateLeptonZ2_1) selectedFsrMap[2] = p4FSR;
+     if(associateLeptonZ2_2) selectedFsrMap[3] = p4FSR;
+ 
+    the key of the map stands for the position of leptons in selectedLeptons vector,
+    and the value is the TLorentzVector of the fsr photon 4-vector.
 
 4.Setup, refit and get the refitted results:
 
-In your analyzer, do
+   In your analyzer, do
 
-     kinZfitter->Setup2L2Q(Zlep,Zhad,resolution_pt,resolution_phi,rho);
-     kinZfitter->KinRefitZlepZhad();
+      kinZfitter->Setup(selectedLeptons, selectedFsrMap);
+      kinZfitter->KinRefitZ1();
+      
+      // refit mass4l
+      double mass4lREFIT = kinZfitter->GetRefitM4l();
+      // four 4-vectors after refitting order by Z1_1,Z1_2,Z2_1,Z2_2
+      vector < TLorentzVector > p4 = kinZfitter->GetRefitP4s(); 
+      // refitted mass4l error
+      double mass4lErrREFIT = kinZfitter->GetRefitM4lErrFullCov();
 
-     // To get refit mZZ
-     double massZZREFIT = kinZfitter->GetRefitMZZ2L2Q();
-     // To get refit hadronic mZ (mjj)
-     double mass4lErrREFIT = kinZfitter->GetRefitMZhad();
-     
-To access JER in local sqlite file in cms config file, add the following lines to you config file
+  There is a function called GetRefitM4lErr() which calculates mass4l error after refitting 
+  assuming that all lepton momenta are UNcorrelated 
+  which is good approximation for reco lepton momenta BUT UNTRUE for refitted lepton momenta.
+  This function will be extended to calculated the mass4l using full covariance matrix soon.
 
-    process.load("JetMETCorrections.Modules.JetResolutionESProducer_cfi")
-    dBJERFile = os.environ.get('CMSSW_BASE')+"/src/KinZfitter/HelperFunction/hists/Summer15_25nsV6_MC_JER.db"
-    # for data
-    #dBJERFile = os.environ.get('CMSSW_BASE')+"/src/KinZfitter/HelperFunction/hists/Summer15_25nsV6_DATA_JER.db"
-    process.jer = cms.ESSource("PoolDBESSource",
-       CondDBSetup,
-       connect = cms.string("sqlite_file:"+dBJERFile),
-       toGet = cms.VPSet(
+5.Support functions
 
-        cms.PSet(
-            record = cms.string('JetResolutionRcd'),
-            tag    = cms.string('JR_Summer15_25nsV6_MC_PtResolution_AK4PFchs'),
-            label  = cms.untracked.string('AK4PFchs_pt') ),
+  massZ1REFIT
+  
+  double massZ1REFIT = kinZfitter->GetRefitMZ1();
+  
+  massZ1Err
 
-        cms.PSet(
-            record = cms.string('JetResolutionRcd'),
-            tag    = cms.string('JR_Summer15_25nsV6_MC_PhiResolution_AK4PFchs'),
-            label  = cms.untracked.string('AK4PFchs_phi') )
-      )
-    )
+  double massZ1Err = kinZfitter->GetMZ1Err();
 
-    process.es_prefer_jer = cms.ESPrefer('PoolDBESSource', 'jer')
+
 
