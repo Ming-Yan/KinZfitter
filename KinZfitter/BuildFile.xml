@@ -34,7 +34,6 @@
 <use   name="Geometry/Records"/>
 <use   name="RecoEcal/EgammaCoreTools"/>
 <use   name="PhysicsTools/SelectorUtils"/>
-<use   name="KinZfitter/HelperFunction"/>
 <use name="root"/>
 <use name="rootmath"/>
 <use name="roofit"/>

@@ -6,12 +6,9 @@
 // Class  :     HelperFunction
 // 
 /**\class HelperFunction HelperFunction.h "HelperFunction.h"
-
- Description: [one line class summary]
-
- Usage:
-    <usage>
-
+   Description: [one line class summary]
+   Usage:
+   <usage>
 */
 //
 // Original Author:  Tongguang Cheng
@@ -46,92 +43,108 @@
 
 #include "DataFormats/Math/interface/deltaR.h"
 #include "DataFormats/Math/interface/deltaPhi.h"
-#include "CommonTools/CandUtils/interface/CenterOfMassBooster.h"
-#include "CommonTools/CandUtils/interface/Booster.h"
-#include "CommonTools/CandUtils/interface/cloneDecayTree.h"
+// #include "CommonTools/CandUtils/interface/CenterOfMassBooster.h"
+// #include "CommonTools/CandUtils/interface/Booster.h"
+// #include "CommonTools/CandUtils/interface/cloneDecayTree.h"
 
-#include "DataFormats/PatCandidates/interface/Electron.h"
-#include "DataFormats/PatCandidates/interface/Muon.h"
-#include "DataFormats/PatCandidates/interface/PFParticle.h"
-#include <cmath>
-#include "DataFormats/Candidate/interface/Candidate.h"
-#include "DataFormats/EgammaCandidates/interface/GsfElectron.h"
-#include "DataFormats/MuonReco/interface/Muon.h"
-#include "DataFormats/GsfTrackReco/interface/GsfTrack.h"
-#include "DataFormats/ParticleFlowCandidate/interface/PFCandidate.h"
-#include "FWCore/Framework/interface/EventSetup.h"
+// #include "DataFormats/PatCandidates/interface/Electron.h"
+// #include "DataFormats/PatCandidates/interface/Muon.h"
+// #include "DataFormats/PatCandidates/interface/PFParticle.h"
+// #include <cmath>
+// #include "DataFormats/Candidate/interface/Candidate.h"
+// #include "DataFormats/EgammaCandidates/interface/GsfElectron.h"
+// #include "DataFormats/MuonReco/interface/Muon.h"
+// #include "DataFormats/GsfTrackReco/interface/GsfTrack.h"
+// #include "DataFormats/ParticleFlowCandidate/interface/PFCandidate.h"
+// #include "FWCore/Framework/interface/EventSetup.h"
 
-#include "TrackingTools/AnalyticalJacobians/interface/JacobianCurvilinearToCartesian.h"
-#include "TrackingTools/TrajectoryParametrization/interface/GlobalTrajectoryParameters.h"
-#include "TrackingTools/TrajectoryParametrization/interface/CartesianTrajectoryError.h"
-#include "MagneticField/Records/interface/IdealMagneticFieldRecord.h"
+// #include "TrackingTools/AnalyticalJacobians/interface/JacobianCurvilinearToCartesian.h"
+// #include "TrackingTools/TrajectoryParametrization/interface/GlobalTrajectoryParameters.h"
+// #include "TrackingTools/TrajectoryParametrization/interface/CartesianTrajectoryError.h"
+// #include "MagneticField/Records/interface/IdealMagneticFieldRecord.h"
 
-#include "RecoParticleFlow/PFClusterTools/interface/PFEnergyResolution.h"
+// #include "RecoParticleFlow/PFClusterTools/interface/PFEnergyResolution.h" 
 #include <TMatrixD.h>
 
 // fit result covariance matrix
 #include <TMatrixDSym.h>
 
-namespace reco { class Candidate; class Muon; class GsfElectron; class Track; class PFCandidate; }
-namespace edm { class EventSetup; }
+// namespace reco { class Candidate; class Muon; class GsfElectron; class Track; class PFCandidate; }
+// namespace edm { class EventSetup; }
 
 #include <vector>
-#include "FWCore/Framework/interface/ESHandle.h"
-#include "MagneticField/Engine/interface/MagneticField.h"
+// #include "FWCore/Framework/interface/ESHandle.h"
+// #include "MagneticField/Engine/interface/MagneticField.h"
 #include <TMatrixDSym.h>
 #include <boost/shared_ptr.hpp>
-
+#include "/afs/cern.ch/work/m/milee/MYcode/plugin/untuplizer_07.h"
 using namespace std;
 
 
 class HelperFunction
 {
 
-   public:
-      HelperFunction();
-      virtual ~HelperFunction();
+ public:
+  HelperFunction(int period ,bool isData);
+  virtual ~HelperFunction();
 
-      void setdebug(int d){debug_= d;};
+  void setdebug(int d){debug_= d;};
 
-      //ForZ
-      double pterr(reco::Candidate *c, bool isData);
+  //ForZ
+  double pterr(TreeReader &data, Int_t lepID,Int_t fsrID, Int_t channel,  bool isData, bool corr);
+  double correlepterr(TreeReader &data, Int_t lepID);
 
-      //double pterr(pat::Electron electron, bool isData);
-      //double pterr(pat::Muon muon, bool isData);
-      double pterr(TLorentzVector fsrPhoton);
+  // double pterr(reco::GsfElectron* electron, bool isData);
 
-      double pterr(reco::GsfElectron* electron, bool isData);
-      double pterr(reco::Muon* muon, bool isData);
+  double masserror(std::vector<TLorentzVector> p4s, std::vector<double> pTErrs);
 
-      double masserror(std::vector<TLorentzVector> p4s, std::vector<double> pTErrs);
+  double masserrorFullCov(std::vector<TLorentzVector> p4s, TMatrixDSym covMatrix);
 
-      double masserrorFullCov(std::vector<TLorentzVector> p4s, TMatrixDSym covMatrix);
-
-      //double masserror(std::vector<TLorentzVector> p4s, )
+  //double masserror(std::vector<TLorentzVector> p4s, )
 
 
-      // ---------- const member functions ---------------------
+ private:
 
-      // ---------- static member functions --------------------
+  HelperFunction(const HelperFunction&); // stop default
 
-      // ---------- member functions ---------------------------
+  const HelperFunction& operator=(const HelperFunction&); // stop default
 
-   private:
+  int debug_;
+/*
+  boost::shared_ptr<TFile>     f_corr_mu;
+  boost::shared_ptr<TFile>     f_corr_e_1;
+  boost::shared_ptr<TFile>     f_corr_e_2;
+  boost::shared_ptr<TFile>     f_corr_e_3;
 
-      HelperFunction(const HelperFunction&); // stop default
+  boost::shared_ptr<TH2F>      mu_corr;
+  boost::shared_ptr<TH2F>      el_corr_1;
+  boost::shared_ptr<TH2F>      el_corr_2;
+  boost::shared_ptr<TH2F>      el_corr_3;
 
-      const HelperFunction& operator=(const HelperFunction&); // stop default
+  TAxis* x_elpTaxis_1;
+  TAxis* y_eletaaxis_1;
+  double maxPtEl_1;
+  double minPtEl_1;
 
-      int debug_;
+  TAxis* x_elpTaxis_2;
+  TAxis* y_eletaaxis_2;
+  double maxPtEl_2;
+  double minPtEl_2;
 
-      boost::shared_ptr<TFile>     fmu;
-      boost::shared_ptr<TFile>     fel;
-      boost::shared_ptr<TH2F>      muon_corr_data;
-      boost::shared_ptr<TH2F>      muon_corr_mc;
-      boost::shared_ptr<TH2F>      electron_corr_data;
-      boost::shared_ptr<TH2F>      electron_corr_mc;
+  TAxis* x_elpTaxis_3;
+  TAxis* y_eletaaxis_3;
+  double maxPtEl_3;
+  double minPtEl_3;
 
-      // ---------- member data --------------------------------
+  TAxis* x_mupTaxis;
+  TAxis* y_muetaaxis;
+  double maxPtMu;
+  double minPtMu;
+     */
+  vector<double> mu, trke,ecalp03,ecalp07;
+  vector<double> mu_mc, trke_mc,ecalp03_mc,ecalp07_mc;
+
+  // ---------- member data --------------------------------
 
 };
 

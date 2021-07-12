@@ -18,7 +18,7 @@
 #include "TLorentzVector.h"
 
 // CMSSW related pT error calculator
-#include "KinZfitter/HelperFunction/interface/HelperFunction.h"
+#include "/afs/cern.ch/work/m/milee/MYcode/KinZfitter/HelperFunction/interface/HelperFunction.h"
 #include "DataFormats/Candidate/interface/Candidate.h"
 
 // ROOFIT
@@ -46,7 +46,7 @@
 
 #include <iostream>
 #include <map>
-#include "plugin/untuplizer_07.h"
+#include "/afs/cern.ch/work/m/milee/MYcode/plugin/untuplizer_07.h"
 // helper function calculate lepton/pfphoton (un)corrected pT error
 class HelperFunction;
 
@@ -56,12 +56,12 @@ using namespace std;
 class KinZfitter {
  public:
 	
-  KinZfitter(bool isData);
+  KinZfitter(bool isData,int period);
   ~KinZfitter();
 
   /// Kinematic fit of lepton momenta
   /// HelperFunction class to calcluate per lepton(+photon) pT error
-  void Setup(TreeReader &data, vector<int> &lepID, vector<int> &fsrID, vector<double> &errpT, int eormu, bool isData, std::map<unsigned int, TLorentzVector>  selectedLeptons, std::map<unsigned int, TLorentzVector> selectedFsrPhotons);
+  void Setup(TreeReader &data, vector<int> &lepID, vector<int> &fsrID, vector<double> &errpT, int eormu, bool isData, std::map<unsigned int, TLorentzVector>  selectedLeptons, std::map<unsigned int, TLorentzVector> selectedFsrPhotons,bool corr);
 
   ///
   void KinRefitZ();
@@ -148,7 +148,7 @@ class KinZfitter {
   /// HelperFunction class to calcluate per lepton(+photon) pT error
   HelperFunction * helperFunc_;
 
-  void initZs(TreeReader &data, vector<int> &lepID, vector<int> &fsrID, vector<double> &errpT ,  int eormu, bool isData, std::map<unsigned int, TLorentzVector>  selectedLeptons, std::map<unsigned int, TLorentzVector> selectedFsrPhotons);
+  void initZs(TreeReader &data, vector<int> &lepID, vector<int> &fsrID, vector<double> &errpT ,  int eormu, bool isData, std::map<unsigned int, TLorentzVector>  selectedLeptons, std::map<unsigned int, TLorentzVector> selectedFsrPhotons,bool corr);
      
   void SetFitInput(FitInput &input,
 		   vector<TLorentzVector> ZLep, vector<double> ZLepErr,
@@ -195,9 +195,9 @@ class KinZfitter {
   double lZ1_ph1_, lZ1_ph2_, lZ2_ph1_, lZ2_ph2_;
   // True mZ1 shape parameters
   ////old version-HZZ group
-  /*double sgVal_, aVal_, nVal_, fVal_, meanVal_, sigmaVal_, f1Val_;
-    double meanCB_, sigmaCB_, alphaCB_, nCB_, meanGauss1_, sigmaGauss1_, f1_, meanGauss2_, sigmaGauss2_, f2_, meanGauss3_, sigmaGauss3_, f3_;*/
-  double sgVal_, aVal_, nVal_, meanVal_, bwsigVal_;
+    double sgVal_, aVal_, nVal_, fVal_, meanVal_, sigmaVal_, f1Val_;
+      double meanCB_, sigmaCB_, alphaCB_, nCB_, meanGauss1_, sigmaGauss1_, f1_, meanGauss2_, sigmaGauss2_, f2_, meanGauss3_, sigmaGauss3_, f3_;
+      /*	 double sgVal_, aVal_, nVal_, meanVal_, bwsigVal_;*/
  
 };
 

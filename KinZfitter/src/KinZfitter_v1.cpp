@@ -7,30 +7,29 @@
 #define KinZfitter_cpp
 // using namespace RooFit;
 /// KinFitter header
-#include "KinZfitter/KinZfitter/interface/KinZfitter.h"
-#include "KinZfitter/HelperFunction/interface/HelperFunction.h"
+#include "/afs/cern.ch/work/m/milee/MYcode/KinZfitter/KinZfitter/interface/KinZfitterv1.h"
+#include "/afs/cern.ch/work/m/milee/MYcode/KinZfitter/HelperFunction/interface/HelperFunction.h"
 //#include "DataFormats/Math/interface/deltaR.h"
 #include "RooWorkspace.h"
 #include "RooProduct.h"
 #include "RooProdPdf.h"
-#include "RooFormulaVar.h"
 #include "FWCore/ParameterSet/interface/FileInPath.h"
 #include "time.h"
 ///----------------------------------------------------------------------------------------------
 /// KinZfitter::KinZfitter - constructor/
 ///----------------------------------------------------------------------------------------------
 
-KinZfitter::KinZfitter(bool isData)
+KinZfitter::KinZfitter(bool isData, int period)
 {    
   // modified with HZg
-  PDFName_ = "HZg_ggF_125GeV_ext1_M125_13TeV_powheg2_pythia8_new";
+  PDFName_ = "HZg_ggF_125GeV_ext1_M125_13TeV_powheg2_pythia8";
 
   debug_ = false;
 
   if(debug_) std::cout << "KinZfitter. The debug flag is ON with "<<PDFName_<< std::endl;
 	
   // / Initialise HelperFunction
-  helperFunc_ = new HelperFunction();
+  helperFunc_ = new HelperFunction(period,isData);
   isCorrPTerr_ = 0; 
   isData_ = isData; 
 
@@ -41,7 +40,7 @@ KinZfitter::~KinZfitter()
   delete helperFunc_;
 }
 
-void KinZfitter::Setup(TreeReader &data, vector<int> &lepID, vector<int> &fsrID, vector<double> &errpT, int eormu, bool isData,  std::map<unsigned int, TLorentzVector> selectedLeptons, std::map<unsigned int, TLorentzVector> selectedFsrPhotons){
+void KinZfitter::Setup(TreeReader &data, vector<int> &lepID, vector<int> &fsrID, vector<double> &errpT, int eormu, bool isData,  std::map<unsigned int, TLorentzVector> selectedLeptons, std::map<unsigned int, TLorentzVector> selectedFsrPhotons, bool corr){
 
   // reset everything for each event
   idsZ1_.clear(); /* idsZ2_.clear();      */ 
@@ -54,9 +53,10 @@ void KinZfitter::Setup(TreeReader &data, vector<int> &lepID, vector<int> &fsrID,
   pTerrsZ1REFIT_.clear();  pTerrsZ1phREFIT_.clear(); /* pTerrsZ2REFIT_.clear();pTerrsZ2phREFIT_.clear(); */
 
   
-  initZs( data, lepID, fsrID, errpT, eormu, isData,  selectedLeptons, selectedFsrPhotons);
+  initZs( data, lepID, fsrID, errpT, eormu, isData,  selectedLeptons, selectedFsrPhotons, corr);
   fs_=""; 
-  if(eormu== 0 ) fs_="ele";
+
+  if(eormu== 0 ){ fs_="ele";selectedFsrPhotons.clear();}
   else  fs_="mu";   
   if(debug_) cout<<"fs is "<<fs_<<endl;    
   if(debug_) cout<<"list ids"<<endl;
@@ -83,7 +83,7 @@ void KinZfitter::Setup(TreeReader &data, vector<int> &lepID, vector<int> &fsrID,
       string p; double val;
       if(iss >> p >> val) {
 	//old version HZZ
-	/*if(p=="sg")  { sgVal_ = val;}
+	if(p=="sg")  { sgVal_ = val;}
 	if(p=="a" )  { aVal_ = val;}
 	if(p=="n" )  { nVal_ = val;}
 	if(p=="f")   { fVal_ = val;}
@@ -104,13 +104,13 @@ void KinZfitter::Setup(TreeReader &data, vector<int> &lepID, vector<int> &fsrID,
 	if(p=="f2")   { f2_ = val;}
 	if(p=="meanGauss3")   { meanGauss3_ = val;}
 	if(p=="sigmaGauss3")   { sigmaGauss3_ = val;}
-	if(p=="f3")   { f3_ = val;}*/
-	
+	if(p=="f3")   { f3_ = val;}
+	/*
 	if(p=="alpha")aVal_ = val;                                                                      
 	if(p=="mean")meanVal_ = val; 
         if(p=="n" )  nVal_ = val;                                                                       
         if(p=="sigma" )  sgVal_ = val;                                                                 
-        if(p=="bwgamma")  bwsigVal_ = val;
+        if(p=="bwgamma")  bwsigVal_ = val;*/
       }
     }
 }
@@ -120,7 +120,7 @@ void KinZfitter::Setup(TreeReader &data, vector<int> &lepID, vector<int> &fsrID,
 ///----------------------------------------------------------------------------------------------
 ///----------------------------------------------------------------------------------------------
 
-void KinZfitter::initZs( TreeReader &data, vector<int> &lepID, vector<int> &fsrID, vector<double> &errpT,int eormu, bool isData, std::map<unsigned int, TLorentzVector>  selectedLeptons, std::map<unsigned int, TLorentzVector> selectedFsrPhotons){
+void KinZfitter::initZs( TreeReader &data, vector<int> &lepID, vector<int> &fsrID, vector<double> &errpT,int eormu, bool isData, std::map<unsigned int, TLorentzVector>  selectedLeptons, std::map<unsigned int, TLorentzVector> selectedFsrPhotons,bool corr){
   if(debug_) cout<<"init leptons"<<endl;
 
 
@@ -128,8 +128,8 @@ void KinZfitter::initZs( TreeReader &data, vector<int> &lepID, vector<int> &fsrI
     {
       double pTerr = 0; TLorentzVector p4;
       p4 = selectedLeptons[il];
-      pTerr = helperFunc_->pterr(data, lepID[il], fsrID[il], eormu, isData); //put lepton err first
-     idsZ1_.push_back(eormu);
+      pTerr = helperFunc_->pterr(data, lepID[il], fsrID[il], eormu, isData,corr); //put lepton err first
+      idsZ1_.push_back(eormu);
       pTerrsZ1_.push_back(pTerr);
       p4sZ1_.push_back(p4);            
       /* else{
@@ -144,14 +144,14 @@ void KinZfitter::initZs( TreeReader &data, vector<int> &lepID, vector<int> &fsrI
   if(debug_) cout<<"init fsr photons"<<endl;
   if(selectedFsrPhotons.size()>0)
     {
-      for(unsigned int ifsr = 0; ifsr<2; ifsr++)
+for(unsigned int ifsr = 0; ifsr<2; ifsr++)
 	{
 	  TLorentzVector p4 = selectedFsrPhotons[ifsr];
 	  if(selectedFsrPhotons[ifsr].Pt()==0) continue;
 	  if(fsrID[ifsr]==-99) continue;
 	  if(debug_) cout<<"ifsr "<<ifsr<<endl;
 	  double pTerr = 0;
-	  pTerr = helperFunc_->pterr(data, lepID[ifsr], -99, eormu, isData); 
+	  pTerr = helperFunc_->pterr(data, lepID[ifsr], fsrID[ifsr], eormu, isData,corr); 
 	  // pTerr = 0.1;
 	  if(debug_) cout<<" pt err is "<<pTerr<<endl;
 	  pTerrsZ1ph_.push_back(pTerr);
@@ -191,7 +191,7 @@ void KinZfitter::SetZResult(double l1, double l2, double lph1, double lph2
        Z2_1_True.SetPtEtaPhiM(lZ2_l1_*Z2_1.Pt(),Z2_1.Eta(),Z2_1.Phi(),Z2_1.M());
        TLorentzVector Z2_2_True(0,0,0,0);
        Z2_2_True.SetPtEtaPhiM(lZ2_l2_*Z2_2.Pt(),Z2_2.Eta(),Z2_2.Phi(),Z2_2.M()); */
-
+  
   p4sZ1REFIT_.push_back(Z1_1_True); p4sZ1REFIT_.push_back(Z1_2_True);
 
   /* p4sZ2REFIT_.push_back(Z2_1_True); p4sZ2REFIT_.push_back(Z2_2_True); */
@@ -267,7 +267,7 @@ double KinZfitter::GetRefitMZ1()
   vector<TLorentzVector> p4s = GetRefitP4s();
 
   TLorentzVector pZ1(0,0,0,0);
-
+  //cout<<"refitted err"<<pTerrsZ1REFIT_[0]<<" "<<pTerrsZ1REFIT_[1]<<endl;
   pZ1 = p4s[0] + p4s[1];
 
   return pZ1.M();
@@ -607,9 +607,14 @@ void KinZfitter::KinRefitZ()
   SetFitInput(fitInput1, p4sZ1_, pTerrsZ1_, p4sZ1ph_, pTerrsZ1ph_);
   if (debug_) cout<<"done input"<<endl;
   Driver(fitInput1, fitOutput1);
+  //selectedFsrMap.size
+  /*if(p4sZ1ph_.size()>0){cout<<p4sZ1ph_.size()<<" "<<fitInput1.pTRECO1_lep<<" "<< fitInput1.pTRECO2_lep<<" "<<fitInput1.pTErr1_lep<<" "<<fitInput1.pTErr2_lep<<" "<<fitInput1.theta1_lep<<" "<<fitInput1.theta2_lep<<" "<<fitInput1.phi1_lep<<" "<<fitInput1.phi2_lep<<endl;
+    for(int i = 0 ; i < p4sZ1ph_.size();i++)cout<<p4sZ1ph_[i]<<endl;
+    }*/
   if (debug_) cout<<"done driver"<<endl;
+  
   SetFitOutput(fitInput1, fitOutput1, l1, l2, lph1, lph2, pTerrsZ1REFIT_, pTerrsZ1phREFIT_, covMatrixZ1_);
-
+  if (debug_)cout<<pTerrsZ1REFIT_[0]<<" "<<pTerrsZ1REFIT_[1]<<endl;
   // pTerrsZ2REFIT_.push_back(pTerrsZ2_[0]); pTerrsZ2REFIT_.push_back(pTerrsZ2_[1]);
 
   // } else {//fit two Zs
@@ -640,7 +645,7 @@ void KinZfitter::KinRefitZ()
 void  KinZfitter::Driver(KinZfitter::FitInput &input, KinZfitter::FitOutput &output) {
 
   MakeModel(input, output);
-
+  
 }
 
 
@@ -654,7 +659,6 @@ void  KinZfitter::SetFitInput(KinZfitter::FitInput &input,
   input.theta1_lep = lep1.Theta(); input.theta2_lep = lep2.Theta();
   input.phi1_lep = lep1.Phi(); input.phi2_lep = lep2.Phi();
   input.m1 = lep1.M(); input.m2 = lep2.M();
-
   input.nFsr = 0;
   TLorentzVector nullFourVector(0, 0, 0, 0);
   TLorentzVector Gamma1, Gamma2;
@@ -665,9 +669,7 @@ void  KinZfitter::SetFitInput(KinZfitter::FitInput &input,
   input.pTRECO2_gamma = Gamma2.Pt(); input.pTErr2_gamma = 0;
   input.theta2_gamma = Gamma2.Theta(); input.phi2_gamma = Gamma1.Phi();
 
-
   if (int(ZGamma.size()) >= 1) {
-
     input.nFsr = 1;
     TLorentzVector gamma1 = ZGamma[0];
     input.pTRECO1_gamma = gamma1.Pt(); input.pTErr1_gamma = ZGammaErr[0];
@@ -684,7 +686,7 @@ void  KinZfitter::SetFitInput(KinZfitter::FitInput &input,
 
   }
 
-	if (debug_) cout << "nFsr: " << input.nFsr << endl;
+  if (debug_) cout << "nFsr: " << input.nFsr << endl;
 }
 
 
@@ -697,13 +699,13 @@ void KinZfitter::SetFitOutput(KinZfitter::FitInput &input, KinZfitter::FitOutput
   l2 = output.pT2_lep/input.pTRECO2_lep;
   pTerrsREFIT_lep.push_back(output.pTErr1_lep);
   pTerrsREFIT_lep.push_back(output.pTErr2_lep);
-
+  
   if (debug_) {
 
     cout << "lep1 pt before: " << input.pTRECO1_lep << ", lep1 pt after: " << output.pT1_lep << endl;
     cout << "lep2 pt before: " << input.pTRECO2_lep << ", lep2 pt after: " << output.pT2_lep << endl;
 
-  }
+    }
 
   if (input.nFsr >= 1) {
     lph1 = 1;
@@ -752,13 +754,12 @@ void KinZfitter::MakeModel(/*RooWorkspace &w,*/ KinZfitter::FitInput &input, Kin
   RooFormulaVar p1v3D2("p1v3D2", dotProduct_3d, RooArgList(pTMean1_lep, pTMean2_lep, theta1_lep, theta2_lep, phi1_lep, phi2_lep));
   TString dotProduct_4d = "@0*@1-@2";
   RooFormulaVar p1D2("p1D2", dotProduct_4d, RooArgList(E1_lep, E2_lep, p1v3D2));  //w.import(p1D2);
-
-
+  
   //gamma ---treat seperately, if no photon--> don't use it
-  TString makeE_gamma = "TMath::Sqrt((@0*@0)/((TMath::Sin(@1))*(TMath::Sin(@1))))";
+  /*TString makeE_gamma = "TMath::Sqrt((@0*@0)/((TMath::Sin(@1))*(TMath::Sin(@1))))";
   if(input.pTErr1_gamma==0.)input.pTErr1_gamma = 0.001;
   if(input.pTErr2_gamma==0.)input.pTErr2_gamma = 0.001;
-  
+
 	RooRealVar pTRECO1_gamma("pTRECO1_gamma", "pTRECO1_gamma", input.pTRECO1_gamma, 5, 500);
 	RooRealVar pTMean1_gamma("pTMean1_gamma", "pTMean1_gamma", 
 	input.pTRECO1_gamma, max(0.5, input.pTRECO1_gamma-2*input.pTErr1_gamma), max(0.5+0.001,input.pTRECO1_gamma+2*input.pTErr1_gamma)); 
@@ -785,7 +786,7 @@ void KinZfitter::MakeModel(/*RooWorkspace &w,*/ KinZfitter::FitInput &input, Kin
 	RooFormulaVar p2Dph2("p2Dph2", dotProduct_4d, RooArgList(E2_lep, E2_gamma, p2v3Dph2));  //w.import(p2Dph2);
 	RooFormulaVar ph1v3Dph2("ph1v3Dph2", dotProduct_3d, RooArgList(pTMean1_gamma, pTMean2_gamma, theta1_gamma, theta2_gamma, phi1_gamma, phi2_gamma));
 	RooFormulaVar ph1Dph2("ph1Dph2", dotProduct_4d, RooArgList(E1_gamma, E2_gamma, ph1v3Dph2)); // w.import(ph1Dph2);
-
+  */
 
   RooFormulaVar* mZ;
 
@@ -797,10 +798,34 @@ void KinZfitter::MakeModel(/*RooWorkspace &w,*/ KinZfitter::FitInput &input, Kin
     mZ = new RooFormulaVar("mZ", "TMath::Sqrt(2*@0+2*@1+2*@2+2*@3+2*@4+2*@5+@6*@6+@7*@7)", RooArgList(p1D2,p1Dph1,p2Dph1,p1Dph2,p2Dph2,ph1Dph2, m1, m2));
     }
     else {*/
-  TString combproduct = "TMath::Sqrt(2*TMath::Sqrt((@0*@0)/((TMath::Sin(@2))*(TMath::Sin(@2)))+@6*@6)*TMath::Sqrt((@1*@1)/((TMath::Sin(@3))*(TMath::Sin(@3)))+@7*@7)-@0*@1*( ((TMath::Cos(@2))*(TMath::Cos(@3)))/((TMath::Sin(@2))*(TMath::Sin(@3)))+(TMath::Cos(@4-@5)))+@6*@6+@7*@7)";
-  mZ = new RooFormulaVar("mZ", combproduct, RooArgList(pTMean1_lep,pTMean2_lep,theta1_lep,theta2_lep,phi1_lep,phi2_lep,m1,m2))  ;
-  //mZ = new RooFormulaVar("mZ", "TMath::Sqrt(2*@0+@1*@1+@2*@2)", RooArgList(p1D2, m1, m2));
-  ///}
+  mZ = new RooFormulaVar("mZ", "TMath::Sqrt(2*@0+@1*@1+@2*@2)", RooArgList(p1D2, m1, m2));
+  //}
+  
+  RooAbsReal *Z = mZ;
+  RooRealVar *Zmass = new RooRealVar("Zmass","",Z->getValV(),0.,200.);
+RooRealVar meanCB("meanCB","",meanCB_);
+  RooRealVar sigmaCB("sigmaCB","",sigmaCB_);
+  RooRealVar alphaCB("alphaCB","",alphaCB_);
+  RooRealVar nCB("nCB","",nCB_);
+  RooRealVar meanGauss1("meanGauss1","",meanGauss1_);
+  RooRealVar sigmaGauss1("sigmaGauss1","",sigmaGauss1_);
+  RooRealVar f1("f1","",f1_);
+  RooRealVar meanGauss2("meanGauss2","",meanGauss2_);
+  RooRealVar sigmaGauss2("sigmaGauss2","",sigmaGauss2_);
+  RooRealVar f2("f2","",f2_);
+  RooRealVar meanGauss3("meanGauss3","",meanGauss3_);
+  RooRealVar sigmaGauss3("sigmaGauss3","",sigmaGauss3_);
+  RooRealVar f3("f3","",f3_);
+
+  RooCBShape* singleCB = new RooCBShape("singleCB", "", *mZ, meanCB, sigmaCB, alphaCB, nCB);
+  RooGaussian* gaussShape1 = new RooGaussian("gaussShape1", "", *mZ, meanGauss1, sigmaGauss1);
+  RooAddPdf* CBplusGauss = new RooAddPdf("CBplusGauss", "", *singleCB, *gaussShape1, f1);
+  RooGaussian* gaussShape2 = new RooGaussian("gaussShape2", "", *mZ, meanGauss2, sigmaGauss2);
+  RooAddPdf* CBplusGaussplusGauss = new RooAddPdf("CBplusGaussplusGauss", "", *CBplusGauss, *gaussShape2, f2);
+  RooGaussian* gaussShape3 = new RooGaussian("gaussShape3", "", *mZ, meanGauss3, sigmaGauss3);
+  RooAddPdf* CBplusGaussplusGaussplusGauss = new RooAddPdf("CBplusGaussplusGaussplusGauss", "", *CBplusGaussplusGauss, *gaussShape3, f3);
+
+  RooProdPdf *model = new RooProdPdf("model","",RooArgList(gauss1_lep, gauss2_lep,*CBplusGaussplusGaussplusGauss));
 
   //true shape
   /*RooRealVar meanCB("meanCB","",meanCB_);
@@ -816,7 +841,7 @@ void KinZfitter::MakeModel(/*RooWorkspace &w,*/ KinZfitter::FitInput &input, Kin
   RooRealVar meanGauss3("meanGauss3","",meanGauss3_);
   RooRealVar sigmaGauss3("sigmaGauss3","",sigmaGauss3_);
   RooRealVar f3("f3","",f3_);
-  
+
   RooCBShape* singleCB = new RooCBShape("singleCB", "", *mZ, meanCB, sigmaCB, alphaCB, nCB);
   RooGaussian* gaussShape1 = new RooGaussian("gaussShape1", "", *mZ, meanGauss1, sigmaGauss1);
   RooAddPdf* CBplusGauss = new RooAddPdf("CBplusGauss", "", *singleCB, *gaussShape1, f1);
@@ -824,65 +849,37 @@ void KinZfitter::MakeModel(/*RooWorkspace &w,*/ KinZfitter::FitInput &input, Kin
   RooAddPdf* CBplusGaussplusGauss = new RooAddPdf("CBplusGaussplusGauss", "", *CBplusGauss, *gaussShape2, f2);
   RooGaussian* gaussShape3 = new RooGaussian("gaussShape3", "", *mZ, meanGauss3, sigmaGauss3);
   RooAddPdf* CBplusGaussplusGaussplusGauss = new RooAddPdf("CBplusGaussplusGaussplusGauss", "", *CBplusGaussplusGauss, *gaussShape3, f3);
-  
-  RooProdPdf *model = new RooProdPdf("model","",RooArgList(gauss1_lep, gauss2_lep,*CBplusGaussplusGaussplusGauss));*/
-  RooArgSet *s ;
-  //if (input.nFsr == 1)  s = new RooArgSet(p1D2, p1Dph1, p2Dph1 , m1, m2);
-  //else if (input.nFsr == 2) s = new RooArgSet(p1D2,p1Dph1,p2Dph1,p1Dph2,p2Dph2,ph1Dph2, m1, m2);
-  //else
-  ///RooAbsReal d2 = p1D2;
 
-  s = new RooArgSet(pTMean1_lep,pTMean2_lep,theta1_lep,theta2_lep,phi1_lep,phi2_lep, m1, m2);
-  RooDataSet *d = new RooDataSet("d","d",*s);
-  RooRealVar *Zmass = (RooRealVar*)d->addColumn(*mZ);
-  Zmass->setRange(0.,200.);
-  Zmass->setBins(1000,"cache");
-  RooRealVar bwMean("bwMean", "m_{Z^{0}}", 91.187);
-  RooRealVar bwGamma("bwGamma", "#Gamma", bwsigVal_);
-  RooRealVar sg("sg", "sg", sgVal_);
-  RooRealVar a("a", "a", aVal_);
-  RooRealVar n("n", "n", nVal_);
-  RooRealVar mean("mean","mean",meanVal_);
-  RooCBShape CB("CB","CB",*mZ,mean,sg,a,n);
-  //cout<<"CB"<<endl;
-  RooGenericPdf RelBW("RelBW","1/( pow(mZ*mZ-bwMean*bwMean,2)+pow(mZ,4)*pow(bwGamma/bwMean,2) )",RooArgSet(*mZ,bwMean,bwGamma) );
-  //cout<<"BW"<<endl;
-  RooFFTConvPdf *RelBWxCB = new RooFFTConvPdf("RelBWxCB","RelBWxCB", *Zmass, RelBW,CB);
-  //cout<<"conv"<<endl;
-  //cout<<RelBWxCB->cacheObservables()<<endl;
-  RooProdPdf *model = new RooProdPdf("model","",RooArgList(gauss1_lep, gauss2_lep,*RelBWxCB));
-  
+  RooProdPdf *model = new RooProdPdf("model","",RooArgList(gauss1_lep, gauss2_lep,*CBplusGaussplusGaussplusGauss));
 
+  */
   //make fit
   RooArgSet *rastmp;
   rastmp = new RooArgSet(pTRECO1_lep, pTRECO2_lep);
   
-    if(input.nFsr == 1) {
+  /*if(input.nFsr == 1) {
     rastmp = new RooArgSet(pTRECO1_lep, pTRECO2_lep, pTRECO1_gamma);
     }
 
     if(input.nFsr == 2) {
     rastmp = new RooArgSet(pTRECO1_lep, pTRECO2_lep, pTRECO1_gamma, pTRECO2_gamma);
-    }
-    RooDataSet* pTs = new RooDataSet("pTs","pTs", *rastmp);
+    }*/
+  RooDataSet* pTs = new RooDataSet("pTs","pTs", *rastmp);
   pTs->add(*rastmp);
-  //pTs->addColumn(*Zmass);
-  //RooRealVar *plotmZ = (RooRealVar*)pTs->addColumn(*Z);
-  //RooRealVar *plotmZ = Zmass;
-  //RooPlot *xframe = plotmZ->frame(50.,120.);
-  //model->plotOn(xframe,RooFit::Name("model"),LineColor(kBlue));
-  //RelBWxCB->plotOn(xframe,RooFit::Name("RelBWxCB"));
-  /*CBplusGaussplusGaussplusGauss->plotOn(xframe,RooFit::Name("CBplusGaussplusGaussplusGauss"),LineStyle(kDashed),LineColor(kRed));*/
-  //xframe->Draw(); 
-   ///gPad->Print(Form("new_%.2f.pdf",input.pTRECO2_lep));
   //RooRealVar *plotmZ = (RooRealVar*)pTs->addColumn(*mZ);
+  //RooPlot *xframe = plotmZ->frame(50,120);
+   //model->plotOn(xframe,RooFit::Name("model"),LineColor(kBlue));
+  //CBplusGaussplusGaussplusGauss->plotOn(xframe,RooFit::Name("CBplusGaussplusGaussplusGauss"));//,LineStyle(kDashed),LineColor(kRed));
+  //xframe->Draw(); 
+  //gPad->Print("old.pdf");
   RooFitResult* r;
   RooMsgService::instance().setGlobalKillBelow(RooFit::WARNING);
   RooMsgService::instance().setGlobalKillBelow(RooFit::FATAL);
   RooMsgService::instance().setSilentMode(true);
-  
-   r = model->fitTo(*pTs,RooFit::Save(),RooFit::Constrain(*mZ),RooFit::PrintLevel(-1));
-   
+
+    r = model->fitTo(*pTs,RooFit::Save(),RooFit::Constrain(*mZ),RooFit::PrintLevel(-1));
+  //r = model->fitTo(*pTs,RooFit::Save(),RooFit::Constrain(*Z),RooFit::PrintLevel(-1));
+
   //save fit result
   const TMatrixDSym& covMatrix = r->covarianceMatrix();
   const RooArgList& finalPars = r->floatParsFinal();
@@ -893,15 +890,15 @@ void KinZfitter::MakeModel(/*RooWorkspace &w,*/ KinZfitter::FitInput &input, Kin
     if(debug_) cout<<"name list of RooRealVar for covariance matrix "<<name<<endl;
 
   }
+
   int size = covMatrix.GetNcols();
   output.covMatrixZ.ResizeTo(size,size);
   output.covMatrixZ = covMatrix;
-    
   output.pT1_lep = pTMean1_lep.getVal();
   output.pT2_lep = pTMean2_lep.getVal();
   output.pTErr1_lep = pTMean1_lep.getError();
   output.pTErr2_lep = pTMean2_lep.getError();
-    if (input.nFsr >= 1) 
+  /*if (input.nFsr >= 1) 
 	{
 		output.pT1_gamma = pTMean1_gamma.getVal();
 		output.pTErr1_gamma = pTMean1_gamma.getError();
@@ -912,33 +909,19 @@ void KinZfitter::MakeModel(/*RooWorkspace &w,*/ KinZfitter::FitInput &input, Kin
 		output.pT2_gamma = pTMean2_gamma.getVal();
 		output.pTErr2_gamma = pTMean2_gamma.getError();
     }
-
-
+  */
   if (r) delete r;
-
-  //delete Z;
-
-  delete Zmass; 
   delete rastmp;
-
   delete pTs;
   delete mZ;
-  //if(d)delete d;
-  if(s)delete s;
-  
-
-  /*delete singleCB;
+  delete singleCB;
   delete gaussShape1;
   delete CBplusGauss;
   delete gaussShape2;
   delete CBplusGaussplusGauss;
   delete gaussShape3;
-  delete CBplusGaussplusGaussplusGauss;*/
-
-  delete RelBWxCB;
-  
-  delete model;  
-
+  delete CBplusGaussplusGaussplusGauss;
+  delete model;
 }
 
 /*bool KinZfitter::IsFourEFourMu(vector<int> &Z1id, vector<int> &Z2id) {
